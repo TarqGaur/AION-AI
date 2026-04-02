@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Encrypted Chat — Robot Mirror</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+      /* ===== DUAL ROBOT BACKGROUND ===== */
+      #robotStage {
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        z-index: 0;
+        pointer-events: none;
+        overflow: hidden;
+      }
+      #robotCanvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+
+      /* Robot name labels */
+      .robot-label {
+        position: absolute;
+        bottom: 90px;
+        font-family: 'Segoe UI', sans-serif;
+        font-size: 0.78rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        color: rgba(255,255,255,0.55);
+        pointer-events: none;
+        z-index: 3;
+        text-shadow: 0 1px 6px rgba(0,0,0,0.5);
+        text-transform: uppercase;
+      }
+      #labelLeft  { left: 18%; transform: translateX(-50%); }
+      #labelRight { left: 82%; transform: translateX(-50%); }
+
+      /* Robot status dots */
+      .robot-status {
+        position: absolute;
+        bottom: 108px;
+        width: 8px; height: 8px;
+        border-radius: 50%;
+        background: #00b894;
+        box-shadow: 0 0 8px rgba(0,184,148,0.7);
+        z-index: 3;
+        pointer-events: none;
+        animation: pulse-dot 2s infinite;
+      }
+      #statusLeft  { left: calc(18% - 30px); }
+      #statusRight { left: calc(82% + 22px); }
+      @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+      /* Robot speech bubbles above robots */
+      .robot-speech {
+        position: absolute;
+        background: rgba(255,255,255,0.92);
+        backdrop-filter: blur(12px);
+        border: 1.5px solid rgba(108,92,231,0.6);
+        border-radius: 14px;
+        padding: 8px 16px;
+        font-family: 'Segoe UI', sans-serif;
+        font-size: 0.88rem;
+        font-weight: 600;
+        color: #1a1a2e;
+        max-width: 220px;
+        text-align: center;
+        z-index: 4;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.3s;
+        box-shadow: 0 4px 20px rgba(108,92,231,0.2);
+        transform: translateX(-50%);
+        bottom: 200px;
+      }
+      .robot-speech::after {
+        content: '';
+        position: absolute;
+        bottom: -9px;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 9px solid transparent;
+        border-top-color: rgba(108,92,231,0.6);
+        border-bottom: 0;
+      }
+      .robot-speech.vis { opacity: 1; }
+      #speechLeft  { left: 18%; }
+      #speechRight { left: 82%; }
+
+      /* AI thinking indicator */
+      .robot-thinking {
+        position: absolute;
+        bottom: 170px;
+        display: flex;
+        gap: 4px;
+        align-items: center;
+        z-index: 4;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.2s;
+      }
+      .robot-thinking.vis { opacity: 1; }
+      #thinkLeft  { left: calc(18% - 16px); }
+      #thinkRight { left: calc(82% - 16px); }
+      .robot-thinking span {
+        width: 6px; height: 6px;
+        border-radius: 50%;
+        background: rgba(108,92,231,0.8);
+        animation: think-dot 1.2s infinite ease-in-out;
+      }
+      .robot-thinking span:nth-child(2) { animation-delay: 0.2s; }
+      .robot-thinking span:nth-child(3) { animation-delay: 0.4s; }
+      @keyframes think-dot { 0%,80%,100%{opacity:0.2;transform:scale(0.7)} 40%{opacity:1;transform:scale(1.2)} }
+
+      /* Python loading overlay for robots */
+      #robotLoadingOverlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(15,15,35,0.85);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 20;
+        transition: opacity 0.6s;
+        pointer-events: none;
+      }
+      #robotLoadingOverlay.gone { opacity: 0; pointer-events: none; }
+      #robotLoadingOverlay .sring {
+        width: 36px; height: 36px;
+        border-radius: 50%;
+        border: 2.5px solid rgba(108,92,231,0.2);
+        border-top-color: #6c5ce7;
+        animation: spin 0.8s linear infinite;
+      }
+      #robotLoadingOverlay p {
+        margin-top: 12px;
+        font-size: 0.7rem;
+        letter-spacing: 0.12em;
+        color: rgba(162,155,254,0.7);
+        font-family: 'Segoe UI', sans-serif;
+      }
+
+      /* Tweak chat layout so messages appear in center third */
+      #chatScreen .messages-container {
+        position: relative;
+        z-index: 5;
+      }
+      #chatScreen .message-input-container {
+        position: relative;
+        z-index: 10;
+      }
+
+      /* Wider message bubbles so text stays readable over robots */
+      .message-bubble {
+        max-width: 55% !important;
+        backdrop-filter: blur(4px);
+      }
+      .message-bubble.me {
+        background: rgba(108,92,231,0.88) !important;
+        margin-left: auto;
+        margin-right: 8px;
+      }
+      .message-bubble.other {
+        background: rgba(162,155,254,0.88) !important;
+        margin-left: 8px;
+      }
+
+      /* Center the chat messages strip */
+      #messagesContainer {
+        padding-left: 28% !important;
+        padding-right: 28% !important;
+      }
+
+      /* Settings section for AI provider */
+      .provider-section .provider-toggle-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 8px;
+      }
+      .provider-btn {
+        flex: 1;
+        min-width: 80px;
+        padding: 8px 10px;
+        background: var(--bg-secondary);
+        border: 2px solid transparent;
+        border-radius: 6px;
+        color: var(--text-secondary);
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        cursor: pointer;
+        transition: all 0.15s;
+        font-family: 'Segoe UI', sans-serif;
+      }
+      .provider-btn.active {
+        background: var(--accent-primary);
+        color: #fff;
+        border-color: var(--accent-primary);
+        box-shadow: 0 0 14px rgba(108,92,231,0.4);
+      }
+      .provider-btn:hover:not(.active) {
+        border-color: var(--accent-primary);
+        color: var(--text-primary);
+      }
+
+      /* Robot emoji indicator in header */
+      .robot-emoji-pair {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        font-size: 1.3rem;
+      }
+    </style>
+</head>
+<body>
+<div id="app" class="app-container">
+
+  <!-- ═══ WELCOME SCREEN ═══ -->
+  <div id="welcomeScreen" class="screen active">
+    <div class="card">
+      <h1>AION AI</h1>
+      <p class="subtitle">End-to-end encrypted · Robot mirrors your feelings · Private</p>
+      <div class="button-group">
+        <button id="createRoomBtn" class="btn btn-primary">Create New Room</button>
+        <button id="joinRoomBtn" class="btn btn-secondary">Join Room</button>
+      </div>
+      <div class="security-note">
+        <small>🔒 All messages encrypted client-side · Robots react to your emotions in real-time</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ CREATE ROOM SCREEN ═══ -->
+  <div id="createRoomScreen" class="screen">
+    <div class="card">
+      <h2>Create New Room</h2>
+      <div class="form-group">
+        <label for="roomNameInput">Room Name (Optional)</label>
+        <input type="text" id="roomNameInput" placeholder="e.g., Private Chat">
+      </div>
+      <div class="form-group">
+        <label for="createPasswordInput">Password *</label>
+        <input type="password" id="createPasswordInput" placeholder="Choose a strong password" required>
+        <small>⚠️ Save this password! No recovery possible.</small>
+      </div>
+      <div class="form-group">
+        <label for="confirmPasswordInput">Confirm Password *</label>
+        <input type="password" id="confirmPasswordInput" placeholder="Re-enter password" required>
+      </div>
+      <div class="button-group">
+        <button id="confirmCreateBtn" class="btn btn-primary">Create Room</button>
+        <button id="cancelCreateBtn" class="btn btn-secondary">Cancel</button>
+      </div>
+      <div id="createRoomStatus" class="status-message"></div>
+    </div>
+  </div>
+
+  <!-- ═══ JOIN ROOM SCREEN ═══ -->
+  <div id="joinRoomScreen" class="screen">
+    <div class="card">
+      <h2>Join Room</h2>
+      <div class="form-group">
+        <label for="roomLinkInput">Room Link or ID</label>
+        <input type="text" id="roomLinkInput" placeholder="Paste room link or ID">
+      </div>
+      <div class="form-group">
+        <label for="joinPasswordInput">Password</label>
+        <input type="password" id="joinPasswordInput" placeholder="Enter room password" required>
+      </div>
+      <div class="button-group">
+        <button id="confirmJoinBtn" class="btn btn-primary">Join Room</button>
+        <button id="cancelJoinBtn" class="btn btn-secondary">Cancel</button>
+      </div>
+      <div id="joinRoomStatus" class="status-message"></div>
+    </div>
+  </div>
+
+  <!-- ═══ CHAT SCREEN ═══ -->
+  <div id="chatScreen" class="screen">
+
+    <!-- Dual Robot Background Stage -->
+    <div id="robotStage">
+      <canvas id="robotCanvas"></canvas>
+
+      <!-- Left Robot overlays -->
+      <div class="robot-status" id="statusLeft"></div>
+      <div class="robot-label" id="labelLeft">You</div>
+      <div class="robot-speech" id="speechLeft"></div>
+      <div class="robot-thinking" id="thinkLeft"><span></span><span></span><span></span></div>
+
+      <!-- Right Robot overlays -->
+      <div class="robot-status" id="statusRight"></div>
+      <div class="robot-label" id="labelRight">Them</div>
+      <div class="robot-speech" id="speechRight"></div>
+      <div class="robot-thinking" id="thinkRight"><span></span><span></span><span></span></div>
+
+      <!-- Python loading overlay -->
+      <div id="robotLoadingOverlay">
+        <div class="sring"></div>
+        <p>Waking up the robots…</p>
+      </div>
+    </div>
+
+    <!-- Chat Header -->
+    <div id="chatHeader" class="chat-header">
+      <div class="room-info">
+        <h3 id="roomNameDisplay">Chat Room</h3>
+        <span id="roomIdDisplay" class="room-id"></span>
+      </div>
+      <div id="robotEmojiHeader" class="robot-emoji-pair">🤖🤖</div>
+      <div class="header-actions">
+        <button id="settingsBtn" class="icon-btn" title="Settings">⚙️</button>
+        <button id="shareRoomBtn" class="icon-btn" title="Share Room">📤</button>
+        <button id="leaveRoomBtn" class="icon-btn" title="Leave Room">🚪</button>
+      </div>
+    </div>
+
+    <!-- Background Image Layer (behind robots) -->
+    <div id="backgroundImageLayer" class="background-image-layer" style="z-index:-1"></div>
+
+    <!-- Messages Container -->
+    <div id="messagesContainer" class="messages-container"></div>
+
+    <!-- Typing Indicator -->
+    <div id="typingIndicator" class="typing-indicator hidden">
+      <span class="typing-dots"><span></span><span></span><span></span></span>
+      <span>typing...</span>
+    </div>
+
+    <!-- Message Input -->
+    <div class="message-input-container">
+      <textarea id="messageInput" placeholder="Type your message…" rows="1"></textarea>
+      <button id="sendMessageBtn" class="btn btn-send">Send</button>
+    </div>
+  </div>
+
+  <!-- ═══ SETTINGS PANEL ═══ -->
+  <div id="settingsPanel" class="settings-panel">
+    <div class="settings-header">
+      <h2>Settings</h2>
+      <button id="closeSettingsBtn" class="icon-btn">✖️</button>
+    </div>
+    <div class="settings-content">
+
+      <!-- 🤖 Robot AI Provider -->
+      <div class="settings-section provider-section">
+        <h3>🤖 Robot AI Provider</h3>
+        <p style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:12px">
+          Which AI drives the robots' emotions & movements?
+        </p>
+        <div class="provider-toggle-row">
+          <button class="provider-btn active" data-provider="cerebras">CEREBRAS</button>
+          <button class="provider-btn" data-provider="groq">GROQ</button>
+          <button class="provider-btn" data-provider="openrouter">OPENROUTER</button>
+          <button class="provider-btn" data-provider="nvidia">NVIDIA</button>
+        </div>
+        <div style="margin-top:10px;padding:10px;background:var(--bg-secondary);border-radius:6px;font-size:0.78rem;color:var(--text-secondary)">
+          <span id="providerStatus">🟢 Cerebras — Fastest • Best for real-time</span>
+        </div>
+      </div>
+
+      <!-- 🎨 Background -->
+      <div class="settings-section">
+        <h3>🎨 Background</h3>
+        <div class="form-group">
+          <label>Chat Background Color</label>
+          <input type="color" id="chatBgColorPicker" class="color-picker" value="#0f0f23">
+        </div>
+        <div class="form-group">
+          <label>Background Image</label>
+          <button id="uploadBgImageBtn" class="btn btn-secondary btn-small">Upload Image</button>
+          <input type="file" id="bgImageInput" accept="image/*" hidden>
+          <button id="removeBgImageBtn" class="btn btn-secondary btn-small">Remove</button>
+        </div>
+        <div class="form-group">
+          <label>Background Opacity</label>
+          <input type="range" id="bgOpacitySlider" min="0" max="100" value="100">
+          <span id="bgOpacityValue">100%</span>
+        </div>
+        <div class="form-group">
+          <label>Background Color</label>
+          <input type="color" id="bgColorPicker" class="color-picker">
+        </div>
+      </div>
+
+      <!-- 💬 Chat Bubbles -->
+      <div class="settings-section">
+        <h3>💬 Chat Colors</h3>
+        <div class="form-group">
+          <label>My Message Bubble</label>
+          <input type="color" id="myBubbleColorPicker" class="color-picker" value="#6c5ce7">
+        </div>
+        <div class="form-group">
+          <label>Other Message Bubble</label>
+          <input type="color" id="otherBubbleColorPicker" class="color-picker" value="#a29bfe">
+        </div>
+        <div class="form-group">
+          <label>My Text Color</label>
+          <input type="color" id="myTextColorPicker" class="color-picker" value="#ffffff">
+        </div>
+        <div class="form-group">
+          <label>Other Text Color</label>
+          <input type="color" id="otherTextColorPicker" class="color-picker" value="#ffffff">
+        </div>
+      </div>
+
+      <!-- 🔵 Shapes -->
+      <div class="settings-section">
+        <h3>🔵 Shapes</h3>
+        <div class="form-group">
+          <label>Bubble Shape</label>
+          <select id="bubbleShapeSelect" class="form-control">
+            <option value="rounded">Rounded</option>
+            <option value="medium">Medium</option>
+            <option value="sharp">Sharp</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Input Shape</label>
+          <select id="inputShapeSelect" class="form-control">
+            <option value="rounded">Rounded</option>
+            <option value="medium">Medium</option>
+            <option value="sharp">Sharp</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Button Shape</label>
+          <select id="buttonShapeSelect" class="form-control">
+            <option value="rounded">Rounded</option>
+            <option value="medium">Medium</option>
+            <option value="sharp">Sharp</option>
+            <option value="pill">Pill</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 📱 Header -->
+      <div class="settings-section">
+        <h3>📱 Header Bar</h3>
+        <label class="toggle-label">
+          <input type="checkbox" id="headerVisibleToggle" checked>
+          <span>Show Header Bar</span>
+        </label>
+        <div class="form-group">
+          <label>Header Background</label>
+          <input type="color" id="headerBgColorPicker" class="color-picker" value="#16213e">
+        </div>
+        <div class="form-group">
+          <label>Header Text Color</label>
+          <input type="color" id="headerTextColorPicker" class="color-picker" value="#eaeaea">
+        </div>
+      </div>
+
+      <!-- 📝 Text & Fonts -->
+      <div class="settings-section">
+        <h3>📝 Text & Fonts</h3>
+        <div class="form-group">
+          <label>Font Size</label>
+          <select id="fontSizeSelect" class="form-control">
+            <option value="12">Small (12px)</option>
+            <option value="14">Medium (14px)</option>
+            <option value="16" selected>Normal (16px)</option>
+            <option value="18">Large (18px)</option>
+            <option value="20">Extra Large (20px)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Font Family</label>
+          <select id="fontFamilySelect" class="form-control">
+            <option value="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif">Segoe UI</option>
+            <option value="Arial, sans-serif">Arial</option>
+            <option value="'Courier New', monospace">Courier New</option>
+            <option value="Georgia, serif">Georgia</option>
+            <option value="'Comic Sans MS', cursive">Comic Sans</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 🎵 Music -->
+      <div class="settings-section">
+        <h3>🎵 Background Music</h3>
+        <label class="toggle-label">
+          <input type="checkbox" id="musicToggle">
+          <span>Enable Background Music</span>
+        </label>
+        <div class="form-group">
+          <button id="uploadMusicBtn" class="btn btn-secondary btn-small">Choose Audio File</button>
+          <input type="file" id="musicFileInput" accept="audio/*" hidden>
+        </div>
+        <div id="musicControls" class="music-controls hidden">
+          <div class="music-info"><span id="musicFileName">No file selected</span></div>
+          <div class="button-group">
+            <button id="playMusicBtn" class="btn btn-secondary btn-small">▶️</button>
+            <button id="pauseMusicBtn" class="btn btn-secondary btn-small">⏸️</button>
+            <button id="stopMusicBtn" class="btn btn-secondary btn-small">⏹️</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Volume</label>
+          <input type="range" id="musicVolumeSlider" min="0" max="100" value="50">
+          <span id="musicVolumeValue">50%</span>
+        </div>
+      </div>
+
+      <!-- ✏️ Background Text -->
+      <div class="settings-section">
+        <h3>✏️ Background Text Overlay</h3>
+        <label class="toggle-label">
+          <input type="checkbox" id="bgTextToggle">
+          <span>Show Text on Background</span>
+        </label>
+        <div class="form-group">
+          <label>Overlay Text</label>
+          <input type="text" id="bgTextInput" placeholder="e.g., Our Private Space ❤️">
+        </div>
+        <div class="form-group">
+          <label>Text Size</label>
+          <input type="range" id="bgTextSizeSlider" min="20" max="100" value="40">
+          <span id="bgTextSizeValue">40px</span>
+        </div>
+        <div class="form-group">
+          <label>Text Color</label>
+          <input type="color" id="bgTextColorPicker" class="color-picker" value="#ffffff">
+        </div>
+        <div class="form-group">
+          <label>Text Position</label>
+          <select id="bgTextPositionSelect" class="form-control">
+            <option value="center">Center</option>
+            <option value="top">Top</option>
+            <option value="bottom">Bottom</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Save / Reset -->
+      <div class="settings-section">
+        <div class="button-group">
+          <button id="saveSettingsBtn" class="btn btn-primary">💾 Save Settings</button>
+          <button id="resetSettingsBtn" class="btn btn-secondary">🔄 Reset</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══ SHARE MODAL ═══ -->
+  <div id="shareModal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Share Room Link</h3>
+      <div class="share-link-container">
+        <input type="text" id="shareLinkInput" readonly>
+        <button id="copyLinkBtn" class="btn btn-primary">Copy</button>
+      </div>
+      <p class="warning">⚠️ Share the password separately via a secure channel!</p>
+      <button id="closeShareModal" class="btn btn-secondary">Close</button>
+    </div>
+  </div>
+
+  <!-- ═══ LOADING OVERLAY ═══ -->
+  <div id="loadingOverlay" class="loading-overlay hidden">
+    <div class="spinner"></div>
+    <p id="loadingText">Processing…</p>
+  </div>
+
+  <audio id="backgroundAudio" loop></audio>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     SCRIPTS
+═══════════════════════════════════════════════════════ -->
+<script src="https://unpkg.com/argon2-browser@1.18.0/dist/argon2-bundled.min.js"></script>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+</script>
+<script src="proxy_client.js"></script>
+
+<script type="module">
+import * as THREE from 'three';
+
+// ════════════════════════════════════════════════════════════════
+//  PROXY ENDPOINT — single Modal URL, zero API keys in browser
+// ════════════════════════════════════════════════════════════════
+const PROXY_URL = 'https://modalacc77--nvidia-proxy-chat.modal.run';
+
+window.ROBOT_PROVIDER = 'cerebras';
+
+// Model config per provider (no keys — server holds those)
+const PROVIDER_MODELS = {
+  cerebras:   { model: 'qwen-3-235b-a22b-instruct-2507',         temperature: 0.72, max_tokens: 10000 },
+  groq:       { model: 'openai/gpt-oss-120b',                    temperature: 0.72, max_tokens: 10000 },
+  openrouter: { model: 'xiaomi/mimo-v2-pro',                     temperature: 0.72, max_tokens: 10000 },
+  nvidia:     { model: 'nvidia/llama-3.3-nemotron-super-49b-v1', temperature: 0.72, max_tokens: 10000 },
+};
+
+// ════════════════════════════════════════════════════════════════
+//  callAI — routes through Modal proxy, no secrets exposed
+// ════════════════════════════════════════════════════════════════
+async function callAI(sysPrompt, userMsg) {
+  const provider = window.ROBOT_PROVIDER || 'cerebras';
+  const cfg      = PROVIDER_MODELS[provider] || PROVIDER_MODELS.cerebras;
+
+  const body = {
+    provider,                          // tells Modal which upstream to call
+    model:       cfg.model,
+    max_tokens:  cfg.max_tokens,
+    temperature: cfg.temperature,
+    messages: [
+      { role: 'system', content: sysPrompt },
+      { role: 'user',   content: userMsg   },
+    ],
+  };
+
+  const res = await fetch(PROXY_URL, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify(body),
+  });
+
+  if (!res.ok) throw new Error(`Proxy HTTP ${res.status}`);
+  const d = await res.json();
+  if (d.error) throw new Error(d.detail || 'Proxy error');
+  return d.choices[0].message.content.trim();
+}
+
+// ════════════════════════════════════════════════════════════════
+//  ROBOT CONFIG + STATE
+// ════════════════════════════════════════════════════════════════
+const C = {
+  U:90, L:85, SH_HEIGHT:155, SH_OFFSET:42,
+  HOME_L:{x:120,y:-40,z:0}, HOME_R:{x:120,y:40,z:0}
+};
+
+function makeRobotState(){
+  return {
+    left:  {cur:{base:0,shl:0,elb:0}, tgt:{base:0,shl:0,elb:0}, spd:45, pos:{...C.HOME_L}},
+    right: {cur:{base:0,shl:0,elb:0}, tgt:{base:0,shl:0,elb:0}, spd:45, pos:{...C.HOME_R}},
+    body:  {cur:{bend:0,twist:0,neck:0}, tgt:{bend:0,twist:0,neck:0}, spd:45},
+    emoji: '🤖', busy: false
+  };
+}
+
+const SL = makeRobotState();
+const SR = makeRobotState();
+
+let stopFlagL=false, stopFlagR=false;
+let pyodide=null, pyodideReady=false;
+let SYS_TEMPLATE=null;
+let T=0;
+
+// ════════════════════════════════════════════════════════════════
+//  THREE.JS — DUAL ROBOTS IN ONE SCENE
+// ════════════════════════════════════════════════════════════════
+let scene, camera, renderer, clock;
+let robotL={}, robotR={};
+let faceCanvasL, faceCtxL, faceTextureL;
+let faceCanvasR, faceCtxR, faceTextureR;
+
+function updateFaceCanvas(ctx, canvas, texture, emoji){
+  if(!ctx) return;
+  const s=1024;
+  canvas.width=canvas.height=s;
+  ctx.clearRect(0,0,s,s);
+  ctx.fillStyle='#0d1525';
+  ctx.fillRect(0,0,s,s);
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(s/2,s/2,s/2-4,0,Math.PI*2);
+  ctx.clip();
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+  ctx.font='700px serif';
+  ctx.shadowColor='rgba(0,0,0,1)';
+  ctx.shadowBlur=20;
+  ctx.shadowOffsetY=18;
+  ctx.fillText(emoji,s/2,s/2+60);
+  ctx.shadowBlur=0; ctx.shadowOffsetY=0;
+  ctx.fillText(emoji,s/2,s/2+60);
+  ctx.restore();
+  ctx.beginPath();
+  ctx.arc(s/2,s/2,s/2-6,0,Math.PI*2);
+  ctx.strokeStyle='rgba(108,92,231,0.9)';
+  ctx.lineWidth=18;
+  ctx.shadowColor='rgba(108,92,231,0.8)';
+  ctx.shadowBlur=40;
+  ctx.stroke();
+  ctx.shadowBlur=0;
+  if(texture) texture.needsUpdate=true;
+}
+
+const m=(c,me=.35,ro=.6)=>new THREE.MeshStandardMaterial({color:c,metalness:me,roughness:ro});
+const mE=(c,e,ei)=>new THREE.MeshStandardMaterial({color:c,emissive:e,emissiveIntensity:ei,metalness:.85,roughness:.15});
+function mk(geo,mat,px=0,py=0,pz=0,rx=0,ry=0,rz=0){
+  const o=new THREE.Mesh(geo,mat); o.position.set(px,py,pz); o.rotation.set(rx,ry,rz); o.castShadow=true; return o;
+}
+
+function buildOneRobot(faceCanvas, faceTexture){
+  const body=m(0x7fafd4,.3,.55), dark=m(0x5a8ab5,.4,.5), panel=m(0xc5ddf5,.1,.7);
+  const blueM=mE(0x6c5ce7,0x6c5ce7,.8), tealM=mE(0xa29bfe,0xa29bfe,.8), ambrM=mE(0xfdcb6e,0xfdcb6e,1.2);
+  const root=new THREE.Group();
+  const base=mk(new THREE.CylinderGeometry(52,60,16,32),dark,0,8);
+  base.receiveShadow=true; root.add(base);
+  base.add(mk(new THREE.TorusGeometry(52,2,8,48),blueM,0,8,0,Math.PI/2));
+  const torsoG=new THREE.Group(); torsoG.position.y=16; base.add(torsoG);
+  const twistG=new THREE.Group(); torsoG.add(twistG);
+  const torso=mk(new THREE.BoxGeometry(70,84,42),body,0,80); twistG.add(torso);
+  torso.add(mk(new THREE.BoxGeometry(46,34,5),panel,0,4,21.5));
+  const stripe=mk(new THREE.BoxGeometry(34,4,6),blueM,0,4,21.5); torso.add(stripe);
+  for(const s of[-1,1]) torso.add(mk(new THREE.BoxGeometry(4,24,4),tealM,s*26,2,20.5));
+  function buildArm(side){
+    const sign=side==='left'?-1:1, ac=side==='left'?blueM:tealM;
+    const sG=new THREE.Group(); sG.position.set(sign*37,34,0); torso.add(sG);
+    sG.add(mk(new THREE.SphereGeometry(14,18,18),dark));
+    sG.add(mk(new THREE.TorusGeometry(13,2,8,26),ac,0,0,0,0,0,Math.PI/2));
+    const pivotY=new THREE.Group(); sG.add(pivotY);
+    const uP=new THREE.Group(); uP.position.y=-14; pivotY.add(uP);
+    uP.add(mk(new THREE.CylinderGeometry(7,6,C.U,14),body,0,-C.U/2));
+    uP.add(mk(new THREE.BoxGeometry(12,C.U*.5,4),panel,sign*3,-C.U/2));
+    const eP=new THREE.Group(); eP.position.y=-C.U; uP.add(eP);
+    eP.add(mk(new THREE.SphereGeometry(9.5,14,14),dark));
+    eP.add(mk(new THREE.TorusGeometry(9,1.8,8,22),ac,0,0,0,0,0,Math.PI/2));
+    eP.add(mk(new THREE.CylinderGeometry(5.5,4.5,C.L,14),body,0,-C.L/2));
+    const wrist=mk(new THREE.SphereGeometry(8,14,14),ac,0,-C.L); eP.add(wrist);
+    for(let f=-1;f<=1;f++) wrist.add(mk(new THREE.BoxGeometry(3,11,4),body,f*4.5,-5.5));
+    return {sG, pivotY, uP, eP};
+  }
+  const lArm=buildArm('left');
+  const rArm=buildArm('right');
+  const neckG=new THREE.Group(); neckG.position.y=42; torso.add(neckG);
+  neckG.add(mk(new THREE.CylinderGeometry(12,14,16,16),dark,0,8));
+  const head=mk(new THREE.BoxGeometry(62,54,52),body,0,45); neckG.add(head);
+  const screenMat=new THREE.MeshStandardMaterial({map:faceTexture,metalness:0.5,roughness:0});
+  const bezelGeo=new THREE.CylinderGeometry(23,23,3,48);
+  const bezel=mk(bezelGeo,m(0x3a5a80,.6,.4),0,6,27);
+  bezel.rotation.x=Math.PI/2; head.add(bezel);
+  const face=mk(new THREE.CircleGeometry(21,64),screenMat,0,6,28.8); head.add(face);
+  const ring=mk(new THREE.TorusGeometry(22,1.2,8,64),mE(0x6c5ce7,0x6c5ce7,0.9),0,6,27.5); head.add(ring);
+  for(const s of[-1,1]) head.add(mk(new THREE.BoxGeometry(6,22,18),dark,s*32));
+  const antS=mk(new THREE.CylinderGeometry(2,3,11,8),dark,0,30); head.add(antS);
+  const ant=mk(new THREE.SphereGeometry(4.2,12,12),ambrM,0,8); antS.add(ant);
+  return {root, torsoG, twistG, torso, stripe, ant, neckG, head, lArm, rArm};
+}
+
+function init3D(){
+  const canvas=document.getElementById('robotCanvas');
+  const stage=document.getElementById('robotStage');
+  scene=new THREE.Scene();
+  clock=new THREE.Clock();
+  scene.fog=new THREE.FogExp2(0x0f0f23,0.0012);
+  camera=new THREE.PerspectiveCamera(52, stage.clientWidth/stage.clientHeight, 0.5, 1200);
+  camera.position.set(0,200,440);
+  camera.lookAt(0,100,0);
+  renderer=new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.setSize(stage.clientWidth, stage.clientHeight);
+  renderer.shadowMap.enabled=true;
+  renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure=1.1;
+  renderer.setClearColor(0x000000, 0);
+
+  scene.add(new THREE.AmbientLight(0xd0e8ff, 4));
+  const key=new THREE.DirectionalLight(0xfff8f0, 2.5);
+  key.position.set(160,320,160); key.castShadow=true;
+  key.shadow.mapSize.set(2048,2048);
+  key.shadow.camera.left=-350; key.shadow.camera.right=350;
+  key.shadow.camera.top=350; key.shadow.camera.bottom=-350;
+  key.shadow.bias=-0.001; scene.add(key);
+  scene.add(new THREE.DirectionalLight(0xb0ccff,1.0)).position.set(-200,80,-100);
+  scene.add(new THREE.DirectionalLight(0xe0f0ff,0.5)).position.set(0,-80,-200);
+
+  const floor=new THREE.Mesh(
+    new THREE.PlaneGeometry(1200,800),
+    new THREE.MeshStandardMaterial({color:0x1a1a2e,roughness:.95,metalness:.05,transparent:true,opacity:0.7})
+  );
+  floor.rotation.x=-Math.PI/2; floor.receiveShadow=true; scene.add(floor);
+  const grid=new THREE.GridHelper(800,50,0x2a2a4e,0x1e1e3e);
+  grid.material.opacity=0.4; grid.material.transparent=true;
+  grid.position.y=0.5; scene.add(grid);
+
+  function makePlatform(x){
+    const plat=new THREE.Mesh(
+      new THREE.CylinderGeometry(78,86,7,48),
+      new THREE.MeshStandardMaterial({color:0x2a2a4e,metalness:.5,roughness:.4})
+    );
+    plat.position.set(x,3.5,0); plat.receiveShadow=true; scene.add(plat);
+    const rim=new THREE.Mesh(
+      new THREE.TorusGeometry(78,2,8,80),
+      new THREE.MeshStandardMaterial({color:0x6c5ce7,emissive:0x6c5ce7,emissiveIntensity:.5,metalness:.9,roughness:.1})
+    );
+    rim.rotation.x=Math.PI/2; rim.position.set(x,7,0); scene.add(rim);
+    return {plat,rim};
+  }
+  makePlatform(-170);
+  makePlatform(170);
+
+  faceCanvasL=document.createElement('canvas'); faceCanvasL.width=faceCanvasL.height=128;
+  faceCtxL=faceCanvasL.getContext('2d');
+  faceTextureL=new THREE.CanvasTexture(faceCanvasL);
+  updateFaceCanvas(faceCtxL,faceCanvasL,faceTextureL,'🤖');
+
+  faceCanvasR=document.createElement('canvas'); faceCanvasR.width=faceCanvasR.height=128;
+  faceCtxR=faceCanvasR.getContext('2d');
+  faceTextureR=new THREE.CanvasTexture(faceCanvasR);
+  updateFaceCanvas(faceCtxR,faceCanvasR,faceTextureR,'🤖');
+
+  robotL=buildOneRobot(faceCanvasL,faceTextureL);
+  robotL.root.position.set(-170,0,0);
+  robotL.root.rotation.y = Math.PI * 0.05;
+  scene.add(robotL.root);
+
+  robotR=buildOneRobot(faceCanvasR,faceTextureR);
+  robotR.root.position.set(170,0,0);
+  robotR.root.rotation.y = -Math.PI * 0.05;
+  scene.add(robotR.root);
+
+  window.addEventListener('resize',()=>{
+    camera.aspect=stage.clientWidth/stage.clientHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(stage.clientWidth,stage.clientHeight);
+  });
+}
+
+function lerp(a,b,t){return a+(b-a)*t;}
+function d2r(d){return d*Math.PI/180;}
+function spd2lerp(s){return Math.min(.18, Math.max(.006, s/80*.18));}
+
+function applyPoseToRobot(rob,S){
+  const L=S.left.cur, R=S.right.cur, B=S.body.cur;
+  if(rob.torsoG) rob.torsoG.rotation.z=d2r(B.bend);
+  if(rob.twistG) rob.twistG.rotation.y=d2r(B.twist);
+  if(rob.neckG)  rob.neckG.rotation.z=d2r(B.neck);
+  if(rob.lArm){
+    rob.lArm.sG.rotation.z=d2r(-L.base);
+    rob.lArm.uP.rotation.x=d2r(L.shl);
+    rob.lArm.eP.rotation.x=d2r(L.elb);
+  }
+  if(rob.rArm){
+    rob.rArm.sG.rotation.z=d2r(R.base);
+    rob.rArm.uP.rotation.x=d2r(R.shl);
+    rob.rArm.eP.rotation.x=d2r(R.elb);
+  }
+}
+
+function smoothState(S){
+  const tl=spd2lerp(S.left.spd), tr=spd2lerp(S.right.spd), tb=spd2lerp(S.body.spd);
+  const lc=S.left.cur,lt=S.left.tgt,rc=S.right.cur,rt=S.right.tgt,bc=S.body.cur,bt=S.body.tgt;
+  lc.base=lerp(lc.base,lt.base,tl); lc.shl=lerp(lc.shl,lt.shl,tl); lc.elb=lerp(lc.elb,lt.elb,tl);
+  rc.base=lerp(rc.base,rt.base,tr); rc.shl=lerp(rc.shl,rt.shl,tr); rc.elb=lerp(rc.elb,rt.elb,tr);
+  bc.bend=lerp(bc.bend,bt.bend,tb); bc.twist=lerp(bc.twist,bt.twist,tb); bc.neck=lerp(bc.neck,bt.neck,tb);
+}
+
+function loop(){
+  requestAnimationFrame(loop);
+  T+=0.016;
+  function idleAnimate(rob,S,phase){
+    if(!S.busy){
+      if(rob.torso) rob.torso.position.y=80+Math.sin(T*1.3+phase)*1.5;
+      if(rob.ant) rob.ant.material.emissiveIntensity=.7+Math.sin(T*3+phase)*.5;
+      if(rob.stripe) rob.stripe.material.emissiveIntensity=.3+Math.sin(T*1.5+phase)*.22;
+    }
+  }
+  idleAnimate(robotL, SL, 0);
+  idleAnimate(robotR, SR, Math.PI);
+  smoothState(SL);
+  smoothState(SR);
+  applyPoseToRobot(robotL, SL);
+  applyPoseToRobot(robotR, SR);
+  renderer.render(scene, camera);
+}
+
+// ═══════════════════════════════════════════════════════
+//  IK SOLVER
+// ═══════════════════════════════════════════════════════
+function ik(side, wx, wy, wz){
+  const sign = side === 'left' ? -1 : 1;
+  const dx = wx, dy = wy - sign * C.SH_OFFSET, dz = wz - C.SH_HEIGHT;
+  const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+  const maxR = C.U + C.L - 2, minR = Math.abs(C.U - C.L) + 2;
+  const clampDist = Math.min(maxR, Math.max(minR, dist));
+  const scale = clampDist / (dist || 1);
+  const sdx = dx*scale, sdy = dy*scale, sdz = dz*scale;
+  const base = Math.atan2(sdx, sign*sdy) * (180/Math.PI);
+  const r = Math.sqrt(sdx*sdx + sdy*sdy);
+  const elev = Math.atan2(sdz, r) * (180/Math.PI);
+  const cosE = (C.U*C.U + C.L*C.L - clampDist*clampDist) / (2*C.U*C.L);
+  const cosT = (C.U*C.U + clampDist*clampDist - C.L*C.L) / (2*C.U*clampDist);
+  const eAng = Math.acos(Math.max(-1,Math.min(1,cosE))) * (180/Math.PI);
+  const tAng = Math.acos(Math.max(-1,Math.min(1,cosT))) * (180/Math.PI);
+  return {
+    base: Math.max(-90,  Math.min(90,  base)),
+    shl:  Math.max(-100, Math.min(100, elev + tAng)),
+    elb:  Math.max(-160, Math.min(0,   eAng - 180))
+  };
+}
+
+// ═══════════════════════════════════════════════════════
+//  ROBOT BRIDGE
+// ═══════════════════════════════════════════════════════
+function makeBridge(S, side, stopFlag, speechEl, onEmoji){
+  return {
+    left_move_to(x,y,z,speed=45){
+      if(stopFlag()) return;
+      y=-Math.abs(+y); speed=Math.max(10,Math.min(80,+speed));
+      S.left.spd=speed; S.left.pos={x:+x,y,z:+z};
+      const r=ik('left',+x,y,+z);
+      S.left.tgt.base=r.base; S.left.tgt.shl=r.shl; S.left.tgt.elb=r.elb;
+    },
+    right_move_to(x,y,z,speed=45){
+      if(stopFlag()) return;
+      y=Math.abs(+y); speed=Math.max(10,Math.min(80,+speed));
+      S.right.spd=speed; S.right.pos={x:+x,y,z:+z};
+      const r=ik('right',+x,y,+z);
+      S.right.tgt.base=r.base; S.right.tgt.shl=r.shl; S.right.tgt.elb=r.elb;
+    },
+    both_home(speed=40){
+      if(stopFlag()) return;
+      speed=+speed; S.left.spd=speed; S.right.spd=speed;
+      S.left.pos={...C.HOME_L}; S.right.pos={...C.HOME_R};
+      const rl=ik('left',C.HOME_L.x,C.HOME_L.y,C.HOME_L.z);
+      const rr=ik('right',C.HOME_R.x,C.HOME_R.y,C.HOME_R.z);
+      S.left.tgt.base=rl.base; S.left.tgt.shl=rl.shl; S.left.tgt.elb=rl.elb;
+      S.right.tgt.base=rr.base; S.right.tgt.shl=rr.shl; S.right.tgt.elb=rr.elb;
+    },
+    left_home(speed=40){
+      if(stopFlag()) return;
+      speed=+speed; S.left.spd=speed; S.left.pos={...C.HOME_L};
+      const r=ik('left',C.HOME_L.x,C.HOME_L.y,C.HOME_L.z);
+      S.left.tgt.base=r.base; S.left.tgt.shl=r.shl; S.left.tgt.elb=r.elb;
+    },
+    right_home(speed=40){
+      if(stopFlag()) return;
+      speed=+speed; S.right.spd=speed; S.right.pos={...C.HOME_R};
+      const r=ik('right',C.HOME_R.x,C.HOME_R.y,C.HOME_R.z);
+      S.right.tgt.base=r.base; S.right.tgt.shl=r.shl; S.right.tgt.elb=r.elb;
+    },
+    body_pose(bend=0,twist=0,neck=0,speed=40){
+      if(stopFlag()) return;
+      S.body.spd=+speed;
+      S.body.tgt.bend=Math.max(-30,Math.min(30,+bend));
+      S.body.tgt.twist=Math.max(-45,Math.min(45,+twist));
+      S.body.tgt.neck=Math.max(-25,Math.min(25,+neck));
+    },
+    say(msg){
+      const el=document.getElementById(speechEl);
+      if(el){
+        el.textContent=String(msg);
+        el.classList.add('vis');
+        setTimeout(()=>el.classList.remove('vis'), Math.min(7000,2000+String(msg).length*55));
+      }
+    },
+    set_emotion(emoji,label){
+      onEmoji(emoji, label);
+    },
+    set_face_emoji(emoji,label='neutral'){
+      onEmoji(emoji,label);
+    },
+    log(msg){},
+    sleep_promise(secs){
+      return new Promise((resolve,reject)=>{
+        if(stopFlag()){reject(new Error('STOPPED'));return;}
+        setTimeout(()=>{ if(stopFlag()) reject(new Error('STOPPED')); else resolve(); },+secs*1000);
+      });
+    },
+    is_stopped(){ return stopFlag(); },
+    get_state(){ return JSON.stringify({left:S.left.pos,right:S.right.pos,body:S.body.cur}); }
+  };
+}
+
+// ═══════════════════════════════════════════════════════
+//  PYODIDE SETUP
+// ═══════════════════════════════════════════════════════
+async function initPyodide(){
+  pyodide = await loadPyodide({indexURL:"https://cdn.jsdelivr.net/pyodide/v0.26.4/full/"});
+
+  window._rbL = makeBridge(SL,'left',()=>stopFlagL,'speechLeft',(emoji,label)=>{
+    SL.emoji=emoji;
+    updateFaceCanvas(faceCtxL,faceCanvasL,faceTextureL,emoji);
+    updateHeaderEmoji();
+    window._pushRobotStateToFirebase && window._pushRobotStateToFirebase('left');
+  });
+  window._rbR = makeBridge(SR,'right',()=>stopFlagR,'speechRight',(emoji,label)=>{
+    SR.emoji=emoji;
+    updateFaceCanvas(faceCtxR,faceCanvasR,faceTextureR,emoji);
+    updateHeaderEmoji();
+    window._pushRobotStateToFirebase && window._pushRobotStateToFirebase('right');
+  });
+
+  await pyodide.runPythonAsync(`
+import js, asyncio, math, random
+
+class _Robot:
+    def __init__(self, bridge):
+        self._b = bridge
+    def left_move_to(self, x, y, z, speed=45):
+        y = -abs(float(y))
+        self._b.left_move_to(float(x), y, float(z), float(speed))
+    def right_move_to(self, x, y, z, speed=45):
+        y = abs(float(y))
+        self._b.right_move_to(float(x), y, float(z), float(speed))
+    def both_home(self, speed=40):
+        self._b.both_home(float(speed))
+    def left_home(self, speed=40):
+        self._b.left_home(float(speed))
+    def right_home(self, speed=40):
+        self._b.right_home(float(speed))
+    def body_pose(self, bend=0, twist=0, neck=0, speed=40):
+        self._b.body_pose(float(bend), float(twist), float(neck), float(speed))
+    def say(self, msg):
+        self._b.say(str(msg))
+    def set_emotion(self, emoji, label="neutral"):
+        self._b.set_emotion(str(emoji), str(label))
+    def set_face_emoji(self, emoji, label="neutral"):
+        self._b.set_emotion(str(emoji), str(label))
+    def get_state(self):
+        import json
+        return json.loads(self._b.get_state())
+
+class _TimeModule:
+    async def sleep(self, secs):
+        if js.window._current_rb.is_stopped():
+            raise RuntimeError("STOPPED")
+        promise = js.window._current_rb.sleep_promise(float(secs))
+        await asyncio.ensure_future(promise)
+        if js.window._current_rb.is_stopped():
+            raise RuntimeError("STOPPED")
+
+import builtins as _builtins
+_orig_print = _builtins.print
+def _print(*args, sep=' ', end='\\n', **kw):
+    msg = sep.join(str(a) for a in args)
+    js.window._current_rb.say(msg)
+_builtins.print = _print
+
+robot_L = _Robot(js.window._rbL)
+robot_R = _Robot(js.window._rbR)
+time = _TimeModule()
+`);
+  pyodideReady=true;
+  document.getElementById('robotLoadingOverlay').classList.add('gone');
+  return true;
+}
+
+async function execRobotCode(code, side){
+  if(!pyodideReady) return;
+  const rb = side==='left' ? '_rbL' : '_rbR';
+  const robotVar = side==='left' ? 'robot_L' : 'robot_R';
+  const fullCode = `
+import js
+js.window._current_rb = js.window.${rb}
+robot = ${robotVar}
+${code}`;
+  try {
+    await pyodide.runPythonAsync(fullCode);
+  } catch(e){
+    const msg=String(e.message||e);
+    if(!msg.includes('STOPPED')) console.warn('Robot exec error:',msg);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  SYSTEM PROMPT LOADER
+// ═══════════════════════════════════════════════════════
+async function loadSystemPrompt(){
+  try {
+    const res=await fetch('prompt.txt');
+    if(!res.ok) throw new Error('not found');
+    SYS_TEMPLATE=await res.text();
+  } catch(e){
+    SYS_TEMPLATE='You are a METHOD ACTOR whose body is a robot. Output ONLY raw Python. robot.set_face_emoji("EMOJI") must be line 1. Mirror user emotion and words exactly in print(). __ROBOT_STATE__';
+  }
+}
+
+function buildPrompt(S){
+  const lp=S.left.pos, rp=S.right.pos, b=S.body.cur;
+  const state=`## CURRENT ROBOT STATE\nLeft: X=${lp.x.toFixed(0)}, Y=${lp.y.toFixed(0)}, Z=${lp.z.toFixed(0)}\nRight: X=${rp.x.toFixed(0)}, Y=${rp.y.toFixed(0)}, Z=${rp.z.toFixed(0)}\nBody: bend=${b.bend.toFixed(1)}°, twist=${b.twist.toFixed(1)}°, neck=${b.neck.toFixed(1)}°`;
+  return (SYS_TEMPLATE||'').replace('__ROBOT_STATE__',state);
+}
+
+// ═══════════════════════════════════════════════════════
+//  FIREBASE ROBOT STATE SYNC
+// ═══════════════════════════════════════════════════════
+window._pushRobotStateToFirebase = function(emojiSide){};
+
+function initRobotSync(firebase, roomId, myUserId){
+  window._pushRobotCode = async function(code, side){
+    try {
+      await firebase.updateData(`rooms/${roomId}/robots/${myUserId}`,{
+        code, side, ts: Date.now()
+      });
+    } catch(e){ console.warn('robot sync push failed',e); }
+  };
+
+  firebase.listenToValue(`rooms/${roomId}/robots`, (robotsData)=>{
+    if(!robotsData) return;
+    for(const [userId, data] of Object.entries(robotsData)){
+      if(userId === myUserId) continue;
+      if(!data || !data.code) continue;
+      const ts = data.ts || 0;
+      if(ts > (window._lastOtherRobotTs || 0)){
+        window._lastOtherRobotTs = ts;
+        stopFlagR=false;
+        execRobotCode(data.code, 'right').catch(()=>{});
+      }
+    }
+  });
+}
+
+// Main entry: run AI for MY (left) robot, push code to Firebase
+window._runRobotAIForMe = async function(message){
+  const S = SL;
+  const thinkEl=document.getElementById('thinkLeft');
+  if(thinkEl) thinkEl.classList.add('vis');
+  try {
+    const sysPrompt=buildPrompt(S);
+    let raw=await callAI(sysPrompt, message);
+    raw=raw.replace(/^```python\s*/,'').replace(/^```\s*/,'').replace(/\s*```$/,'').trim();
+    if(thinkEl) thinkEl.classList.remove('vis');
+    stopFlagL=false;
+    await execRobotCode(raw,'left');
+    window._pushRobotCode && window._pushRobotCode(raw,'left');
+  } catch(e){
+    if(thinkEl) thinkEl.classList.remove('vis');
+    console.warn('Robot AI error:',e);
+  }
+};
+
+function updateHeaderEmoji(){
+  const el=document.getElementById('robotEmojiHeader');
+  if(el) el.textContent=SL.emoji+' '+SR.emoji;
+}
+
+window._setRobotLabels = function(myName, otherName){
+  const lbl=document.getElementById('labelLeft');
+  const rbll=document.getElementById('labelRight');
+  if(lbl) lbl.textContent=myName||'You';
+  if(rbll) rbll.textContent=otherName||'Them';
+};
+
+// ═══════════════════════════════════════════════════════
+//  STARTUP
+// ═══════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', async()=>{
+  let robotsInitialized=false;
+  const initRobots=async()=>{
+    if(robotsInitialized) return;
+    robotsInitialized=true;
+    await loadSystemPrompt();
+    init3D();
+    loop();
+    await initPyodide();
+  };
+
+  const observer=new MutationObserver(()=>{
+    const cs=document.getElementById('chatScreen');
+    if(cs && cs.classList.contains('active')){
+      initRobots();
+    }
+  });
+  observer.observe(document.getElementById('chatScreen'),{attributes:true,attributeFilter:['class']});
+
+  // Provider buttons
+  document.querySelectorAll('.provider-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      document.querySelectorAll('.provider-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      const p=btn.dataset.provider;
+      window.ROBOT_PROVIDER=p;
+      const labels={cerebras:'🟢 Cerebras — Fastest • Best for real-time',groq:'🔵 Groq — Fast • Multiple models',openrouter:'🟣 OpenRouter — Wide model selection',nvidia:'🟡 NVIDIA — High quality • Slower'};
+      document.getElementById('providerStatus').textContent=labels[p]||p;
+    });
+  });
+});
+
+// Expose to app.js
+window.RobotSystem = {
+  runForMe: (msg)=>window._runRobotAIForMe(msg),
+  initSync: initRobotSync,
+  setLabels: (my,other)=>window._setRobotLabels(my,other),
+  isReady: ()=>pyodideReady
+};
+
+</script>
+
+<!-- Main App Logic -->
+<script src="app.js"></script>
+</body>
+</html>
