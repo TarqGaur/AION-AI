@@ -675,27 +675,28 @@ const Settings = {
 
     getDefaultSettings() {
         return {
-            // Background
-            bgColor: '#0f0f23',
-            bgImage: null,
-            bgOpacity: 100,
-            
-            // Chat colors
-            myBubbleColor: '#6c5ce7',
-            otherBubbleColor: '#a29bfe',
-            myTextColor: '#ffffff',
-            otherTextColor: '#ffffff',
-            chatBgColor: '#0f0f23',
+           bgColor: '#faf9f7',          // was: '#0f0f23'
+        bgImage: null,
+        bgOpacity: 100,
+
+        // Chat colors
+        myBubbleColor: '#2d2926',    // was: '#6c5ce7'
+        otherBubbleColor: '#ede9e3', // was: '#a29bfe'
+        myTextColor: '#faf9f7',      // same
+        otherTextColor: '#1a1814',   // was: '#ffffff'
+        chatBgColor: '#faf9f7',      // was: '#0f0f23'
+
+        // Header
+        headerVisible: true,
+        headerBgColor: '#ffffff',    // was: '#16213e'
+        headerTextColor: '#1a1814', // was: '#eaeaea'
             
             // Shapes
             bubbleShape: 'rounded',
             inputShape: 'rounded',
             buttonShape: 'rounded',
             
-            // Header
-            headerVisible: true,
-            headerBgColor: '#16213e',
-            headerTextColor: '#eaeaea',
+          
             
             // Text
             fontSize: '16',
