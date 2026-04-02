@@ -19,20 +19,20 @@
         width: 100%;
         height: 100%;
         display: block;
+        opacity: 0.9;
       }
 
       /* Robot name labels */
       .robot-label {
         position: absolute;
         bottom: 90px;
-        font-family: 'Segoe UI', sans-serif;
-        font-size: 0.78rem;
-        font-weight: 600;
-        letter-spacing: 0.08em;
-        color: rgba(255,255,255,0.55);
+        font-family: 'DM Sans', 'Segoe UI', sans-serif;
+        font-size: 0.68rem;
+        font-weight: 500;
+        letter-spacing: 0.14em;
+        color: rgba(26,24,20,0.35);
         pointer-events: none;
         z-index: 3;
-        text-shadow: 0 1px 6px rgba(0,0,0,0.5);
         text-transform: uppercase;
       }
       #labelLeft  { left: 18%; transform: translateX(-50%); }
@@ -42,10 +42,10 @@
       .robot-status {
         position: absolute;
         bottom: 108px;
-        width: 8px; height: 8px;
+        width: 7px; height: 7px;
         border-radius: 50%;
-        background: #00b894;
-        box-shadow: 0 0 8px rgba(0,184,148,0.7);
+        background: #4a7c5c;
+        box-shadow: 0 0 6px rgba(74,124,92,0.6);
         z-index: 3;
         pointer-events: none;
         animation: pulse-dot 2s infinite;
@@ -57,33 +57,33 @@
       /* Robot speech bubbles above robots */
       .robot-speech {
         position: absolute;
-        background: rgba(255,255,255,0.92);
-        backdrop-filter: blur(12px);
-        border: 1.5px solid rgba(108,92,231,0.6);
-        border-radius: 14px;
-        padding: 8px 16px;
-        font-family: 'Segoe UI', sans-serif;
-        font-size: 0.88rem;
-        font-weight: 600;
-        color: #1a1a2e;
-        max-width: 220px;
+        background: rgba(255,255,255,0.96);
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(139,115,85,0.25);
+        border-radius: 12px;
+        padding: 8px 15px;
+        font-family: 'DM Sans', 'Segoe UI', sans-serif;
+        font-size: 0.82rem;
+        font-weight: 500;
+        color: #1a1814;
+        max-width: 200px;
         text-align: center;
         z-index: 4;
         pointer-events: none;
         opacity: 0;
         transition: opacity 0.3s;
-        box-shadow: 0 4px 20px rgba(108,92,231,0.2);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         transform: translateX(-50%);
         bottom: 200px;
       }
       .robot-speech::after {
         content: '';
         position: absolute;
-        bottom: -9px;
+        bottom: -8px;
         left: 50%;
         transform: translateX(-50%);
-        border: 9px solid transparent;
-        border-top-color: rgba(108,92,231,0.6);
+        border: 8px solid transparent;
+        border-top-color: rgba(139,115,85,0.25);
         border-bottom: 0;
       }
       .robot-speech.vis { opacity: 1; }
@@ -106,9 +106,9 @@
       #thinkLeft  { left: calc(18% - 16px); }
       #thinkRight { left: calc(82% - 16px); }
       .robot-thinking span {
-        width: 6px; height: 6px;
+        width: 5px; height: 5px;
         border-radius: 50%;
-        background: rgba(108,92,231,0.8);
+        background: rgba(139,115,85,0.7);
         animation: think-dot 1.2s infinite ease-in-out;
       }
       .robot-thinking span:nth-child(2) { animation-delay: 0.2s; }
@@ -119,7 +119,7 @@
       #robotLoadingOverlay {
         position: absolute;
         inset: 0;
-        background: rgba(15,15,35,0.85);
+        background: rgba(250,249,247,0.9);
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -130,18 +130,19 @@
       }
       #robotLoadingOverlay.gone { opacity: 0; pointer-events: none; }
       #robotLoadingOverlay .sring {
-        width: 36px; height: 36px;
+        width: 32px; height: 32px;
         border-radius: 50%;
-        border: 2.5px solid rgba(108,92,231,0.2);
-        border-top-color: #6c5ce7;
+        border: 2px solid rgba(139,115,85,0.15);
+        border-top-color: #8b7355;
         animation: spin 0.8s linear infinite;
       }
       #robotLoadingOverlay p {
         margin-top: 12px;
-        font-size: 0.7rem;
-        letter-spacing: 0.12em;
-        color: rgba(162,155,254,0.7);
-        font-family: 'Segoe UI', sans-serif;
+        font-size: 0.68rem;
+        letter-spacing: 0.14em;
+        color: rgba(122,117,112,0.7);
+        font-family: 'DM Sans', 'Segoe UI', sans-serif;
+        text-transform: uppercase;
       }
 
       /* Tweak chat layout so messages appear in center third */
@@ -154,19 +155,20 @@
         z-index: 10;
       }
 
-      /* Wider message bubbles so text stays readable over robots */
+      /* Message bubbles over robots */
       .message-bubble {
         max-width: 55% !important;
-        backdrop-filter: blur(4px);
+        backdrop-filter: blur(2px);
       }
       .message-bubble.me {
-        background: rgba(108,92,231,0.88) !important;
+        background: rgba(45,41,38,0.92) !important;
         margin-left: auto;
         margin-right: 8px;
       }
       .message-bubble.other {
-        background: rgba(162,155,254,0.88) !important;
+        background: rgba(237,233,227,0.94) !important;
         margin-left: 8px;
+        border: 1px solid rgba(229,225,219,0.8) !important;
       }
 
       /* Center the chat messages strip */
@@ -187,25 +189,27 @@
         min-width: 80px;
         padding: 8px 10px;
         background: var(--bg-secondary);
-        border: 2px solid transparent;
+        border: 1px solid var(--border);
         border-radius: 6px;
         color: var(--text-secondary);
-        font-size: 0.72rem;
-        font-weight: 700;
-        letter-spacing: 0.06em;
+        font-size: 0.7rem;
+        font-weight: 500;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
         cursor: pointer;
         transition: all 0.15s;
-        font-family: 'Segoe UI', sans-serif;
+        font-family: 'DM Sans', 'Segoe UI', sans-serif;
       }
       .provider-btn.active {
         background: var(--accent-primary);
-        color: #fff;
+        color: #faf9f7;
         border-color: var(--accent-primary);
-        box-shadow: 0 0 14px rgba(108,92,231,0.4);
+        box-shadow: 0 2px 8px rgba(45,41,38,0.2);
       }
       .provider-btn:hover:not(.active) {
-        border-color: var(--accent-primary);
+        border-color: var(--accent-secondary);
         color: var(--text-primary);
+        background: var(--bg-card);
       }
 
       /* Robot emoji indicator in header */
@@ -213,7 +217,7 @@
         display: flex;
         gap: 6px;
         align-items: center;
-        font-size: 1.3rem;
+        font-size: 1.2rem;
       }
     </style>
 </head>
@@ -667,7 +671,7 @@ function updateFaceCanvas(ctx, canvas, texture, emoji){
   const s=1024;
   canvas.width=canvas.height=s;
   ctx.clearRect(0,0,s,s);
-  ctx.fillStyle='#0d1525';
+  ctx.fillStyle='#2d2926';          // was: '#0d1525'  ← warm dark brown
   ctx.fillRect(0,0,s,s);
   ctx.save();
   ctx.beginPath();
@@ -685,13 +689,14 @@ function updateFaceCanvas(ctx, canvas, texture, emoji){
   ctx.restore();
   ctx.beginPath();
   ctx.arc(s/2,s/2,s/2-6,0,Math.PI*2);
-  ctx.strokeStyle='rgba(108,92,231,0.9)';
+  ctx.strokeStyle='rgba(139,115,85,0.9)';   // was: 'rgba(108,92,231,0.9)' ← warm tan
   ctx.lineWidth=18;
-  ctx.shadowColor='rgba(108,92,231,0.8)';
+  ctx.shadowColor='rgba(139,115,85,0.8)';   // was: 'rgba(108,92,231,0.8)'
   ctx.shadowBlur=40;
   ctx.stroke();
   ctx.shadowBlur=0;
-  if(texture) texture.needsUpdate=true;
+  if(texture) 
+  texture.needsUpdate=true;
 }
 
 const m=(c,me=.35,ro=.6)=>new THREE.MeshStandardMaterial({color:c,metalness:me,roughness:ro});
@@ -701,8 +706,12 @@ function mk(geo,mat,px=0,py=0,pz=0,rx=0,ry=0,rz=0){
 }
 
 function buildOneRobot(faceCanvas, faceTexture){
-  const body=m(0x7fafd4,.3,.55), dark=m(0x5a8ab5,.4,.5), panel=m(0xc5ddf5,.1,.7);
-  const blueM=mE(0x6c5ce7,0x6c5ce7,.8), tealM=mE(0xa29bfe,0xa29bfe,.8), ambrM=mE(0xfdcb6e,0xfdcb6e,1.2);
+   const body  = m(0xc8b89a, .3, .55);   // was: 0x7fafd4 (blue) → warm tan
+  const dark  = m(0x8a7860, .4, .5);    // was: 0x5a8ab5 (blue) → warm brown
+  const panel = m(0xf0ece4, .1, .7);    // was: 0xc5ddf5 (light blue) → warm cream
+  const blueM = mE(0x8b7355, 0x8b7355, .8);  // was: 0x6c5ce7 → warm accent
+  const tealM = mE(0xb8a88a, 0xb8a88a, .8);  // was: 0xa29bfe → warm light tan
+  const ambrM = mE(0xb8860b, 0xb8860b, 1.2); // was: 0xfdcb6e → dark gold (same vibe)
   const root=new THREE.Group();
   const base=mk(new THREE.CylinderGeometry(52,60,16,32),dark,0,8);
   base.receiveShadow=true; root.add(base);
@@ -740,8 +749,8 @@ function buildOneRobot(faceCanvas, faceTexture){
   const bezel=mk(bezelGeo,m(0x3a5a80,.6,.4),0,6,27);
   bezel.rotation.x=Math.PI/2; head.add(bezel);
   const face=mk(new THREE.CircleGeometry(21,64),screenMat,0,6,28.8); head.add(face);
-  const ring=mk(new THREE.TorusGeometry(22,1.2,8,64),mE(0x6c5ce7,0x6c5ce7,0.9),0,6,27.5); head.add(ring);
-  for(const s of[-1,1]) head.add(mk(new THREE.BoxGeometry(6,22,18),dark,s*32));
+ const ring = mk(new THREE.TorusGeometry(22,1.2,8,64), mE(0x8b7355,0x8b7355,0.9), 0,6,27.5);
+   for(const s of[-1,1]) head.add(mk(new THREE.BoxGeometry(6,22,18),dark,s*32));
   const antS=mk(new THREE.CylinderGeometry(2,3,11,8),dark,0,30); head.add(antS);
   const ant=mk(new THREE.SphereGeometry(4.2,12,12),ambrM,0,8); antS.add(ant);
   return {root, torsoG, twistG, torso, stripe, ant, neckG, head, lArm, rArm};
@@ -752,10 +761,14 @@ function init3D(){
   const stage=document.getElementById('robotStage');
   scene=new THREE.Scene();
   clock=new THREE.Clock();
-  scene.fog=new THREE.FogExp2(0x0f0f23,0.0012);
+
+  // ✅ Warm cream fog instead of dark navy
+  scene.fog=new THREE.FogExp2(0xf2f0ec, 0.0008);
+
   camera=new THREE.PerspectiveCamera(52, stage.clientWidth/stage.clientHeight, 0.5, 1200);
   camera.position.set(0,200,440);
   camera.lookAt(0,100,0);
+
   renderer=new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
   renderer.setPixelRatio(Math.min(devicePixelRatio,2));
   renderer.setSize(stage.clientWidth, stage.clientHeight);
@@ -765,34 +778,43 @@ function init3D(){
   renderer.toneMappingExposure=1.1;
   renderer.setClearColor(0x000000, 0);
 
-  scene.add(new THREE.AmbientLight(0xd0e8ff, 4));
+  // ✅ Warm ivory ambient instead of cool blue
+  scene.add(new THREE.AmbientLight(0xfff5e6, 4));
+
   const key=new THREE.DirectionalLight(0xfff8f0, 2.5);
   key.position.set(160,320,160); key.castShadow=true;
   key.shadow.mapSize.set(2048,2048);
   key.shadow.camera.left=-350; key.shadow.camera.right=350;
   key.shadow.camera.top=350; key.shadow.camera.bottom=-350;
   key.shadow.bias=-0.001; scene.add(key);
-  scene.add(new THREE.DirectionalLight(0xb0ccff,1.0)).position.set(-200,80,-100);
-  scene.add(new THREE.DirectionalLight(0xe0f0ff,0.5)).position.set(0,-80,-200);
 
+  // ✅ Warm fill lights instead of cool blue ones
+  scene.add(new THREE.DirectionalLight(0xf5ede0, 1.0)).position.set(-200,80,-100);
+  scene.add(new THREE.DirectionalLight(0xfff0e8, 0.5)).position.set(0,-80,-200);
+
+  // ✅ Warm beige floor instead of dark navy
   const floor=new THREE.Mesh(
     new THREE.PlaneGeometry(1200,800),
-    new THREE.MeshStandardMaterial({color:0x1a1a2e,roughness:.95,metalness:.05,transparent:true,opacity:0.7})
+    new THREE.MeshStandardMaterial({color:0xe5e1db, roughness:.95, metalness:.05, transparent:true, opacity:0.7})
   );
   floor.rotation.x=-Math.PI/2; floor.receiveShadow=true; scene.add(floor);
-  const grid=new THREE.GridHelper(800,50,0x2a2a4e,0x1e1e3e);
-  grid.material.opacity=0.4; grid.material.transparent=true;
+
+  // ✅ Warm neutral grid instead of dark purple
+  const grid=new THREE.GridHelper(800,50,0xc8c4bc,0xd8d4cd);
+  grid.material.opacity=0; grid.material.transparent=true;
   grid.position.y=0.5; scene.add(grid);
 
   function makePlatform(x){
     const plat=new THREE.Mesh(
       new THREE.CylinderGeometry(78,86,7,48),
-      new THREE.MeshStandardMaterial({color:0x2a2a4e,metalness:.5,roughness:.4})
+      // ✅ Warm light beige platform instead of dark navy
+      new THREE.MeshStandardMaterial({color:0xe0ddd6, metalness:.5, roughness:.4})
     );
     plat.position.set(x,3.5,0); plat.receiveShadow=true; scene.add(plat);
     const rim=new THREE.Mesh(
       new THREE.TorusGeometry(78,2,8,80),
-      new THREE.MeshStandardMaterial({color:0x6c5ce7,emissive:0x6c5ce7,emissiveIntensity:.5,metalness:.9,roughness:.1})
+      // ✅ Warm tan-gold rim instead of purple
+      new THREE.MeshStandardMaterial({color:0x8b7355, emissive:0x8b7355, emissiveIntensity:.5, metalness:.9, roughness:.1})
     );
     rim.rotation.x=Math.PI/2; rim.position.set(x,7,0); scene.add(rim);
     return {plat,rim};
