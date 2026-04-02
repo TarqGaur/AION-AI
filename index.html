@@ -171,10 +171,28 @@
         border: 1px solid rgba(229,225,219,0.8) !important;
       }
 
-      /* Center the chat messages strip */
+      /* Center the chat messages strip — desktop only */
       #messagesContainer {
         padding-left: 28% !important;
         padding-right: 28% !important;
+      }
+
+      /* ── Mobile overrides: robots shrink to corners, chat takes full width ── */
+      @media (max-width: 480px) {
+        #messagesContainer {
+          padding-left: 8px !important;
+          padding-right: 8px !important;
+        }
+        .message-bubble {
+          max-width: 88% !important;
+        }
+        /* Scale robot canvas so robots fit within screen width */
+        #robotCanvas {
+          object-fit: cover;
+        }
+        /* Speech bubbles reposition for narrow screens */
+        #speechLeft  { left: 16%; }
+        #speechRight { left: 84%; }
       }
 
       /* Settings section for AI provider */
@@ -842,11 +860,27 @@ function init3D(){
   robotR.root.rotation.y = -Math.PI * 0.05;
   scene.add(robotR.root);
 
-  window.addEventListener('resize',()=>{
-    camera.aspect=stage.clientWidth/stage.clientHeight;
+  function updateCamera(){
+    const w=stage.clientWidth, h=stage.clientHeight;
+    camera.aspect = w / h;
+    // On narrow screens, zoom out so both robots stay fully visible
+    if(w < 480) {
+      camera.fov = 80;
+      camera.position.set(0, 180, 520);
+    } else if(w < 768) {
+      camera.fov = 65;
+      camera.position.set(0, 190, 475);
+    } else {
+      camera.fov = 52;
+      camera.position.set(0, 200, 440);
+    }
+    camera.lookAt(0, 100, 0);
     camera.updateProjectionMatrix();
-    renderer.setSize(stage.clientWidth,stage.clientHeight);
-  });
+    renderer.setSize(w, h);
+  }
+
+  window.addEventListener('resize', updateCamera);
+  updateCamera();
 }
 
 function lerp(a,b,t){return a+(b-a)*t;}
